@@ -24,43 +24,17 @@ token toki=mapper.readValue(jsonInString,token.class);
 */
 
 public class process{
-  public static class listenerUnicast implements Runnable{
-    //Definicion de variables para almacenar ip y port multicast.
-    InetAddress servC;
-		int PORT;
-		int id;
-    public listenerUnicast(InetAddress serv,int por,int idd){
-			this.servC=serv;
-			this.PORT=por;
-			this.id=idd;
-    }
-    //Codigo del thread.
-    public void run(){
-      //Se abre el socket multicast para escuchar al puerto indicado.
-			try (DatagramSocket clientSocket = new DatagramSocket(0)){
-				String registro="r-id:"+Integer.toString(id)+" ,puerto:"+Integer.toString(clientSocket.getLocalPort());
-				System.out.println(registro);
-				DatagramPacket solicitud= new DatagramPacket(registro.getBytes(),registro.getBytes().length,servC,PORT);
-	      clientSocket.send(solicitud);
-				byte[] buf = new byte[256];
-				DatagramPacket msgPacket = new DatagramPacket(buf, buf.length);
-				clientSocket.receive(msgPacket);
-				String msg=new String(buf, 0, msgPacket.getLength());
-				//token toki=mapper.readValue(msg,token.class);
-				//s.getToken(toki);
-	    } catch (IOException ex) {
-	        ex.printStackTrace();
-	    }
-    }
-  }
+
 
 	public static class listenerP implements Runnable{
     //Definicion de variables para almacenar ip y port multicast.
     public int portm;
     public InetAddress address;
-    public listenerP(int puerto,InetAddress dir){
+    public Estado estado;
+    public listenerP(int puerto,InetAddress dir,Estado state){
       this.portm=puerto;
       this.address=dir;
+      this.estado=state;
     }
     //Codigo del thread.
     public void run(){
@@ -89,17 +63,18 @@ public class process{
           //Guardar en msg el contenido del datagrama.
           msg = new String(buf, 0, msgPacket.getLength());
 					System.out.println(msg);
-					if(msg.equals("Listaylor Swift")){
-						System.out.println(msg);
-						continue;
-					}
+
           //Se utilizan expresiones regulares para extraer la informacion del distrito.
-          String patron="id: ([0-9]+), secuencia: ([0-9]+)";
+          String patron="id: ([0-9]+), seq: ([0-9]+)";
           Pattern lector=Pattern.compile(patron);
           Matcher matcher= lector.matcher(msg);
           matcher.find( );
           int id=Integer.parseInt(matcher.group(1));
           int seq=Integer.parseInt(matcher.group(2));
+          if (seq>estado.getRN(id)) {
+            estado.setRN(id,seq);
+          }
+          estado.printRN();
 
         }
         //Si se sale del loop, dejar el grupo multicast.
@@ -109,24 +84,42 @@ public class process{
       }
     }
   }
-  public class estado{
-    int estado; //TODO 0 indicara verde, 1 indicara amarillo y 2 rojo
+  public static class Estado{
+    int estado=0; //TODO 0 indicara verde, 1 indicara amarillo y 2 rojo
     int id;
     boolean bearer;
+    Semaforo sem;
     List<Integer> rn=new ArrayList<>();
-    public estado(int n,boolean b,int idd){
+    public Estado(int n,boolean b,int idd,Semaforo semaforo){
       for (int i=0;i<n;i++) {
         rn.add(0);
       }
       this.id=idd;
+      this.sem=semaforo;
       if (bearer == true){
         System.out.println("ES TRUE");
         //String tokenString=JSON.stringify(toki);
 
       }
     }
-
-
+    public int getRN(int id){
+      return(rn.get(id));
+    }
+    public void setRN(int id,int seq){
+      rn.set(id,seq);
+    }
+    public void printRN(){
+      System.out.println(rn);
+    }
+    public void entrarCS() throws RemoteException{
+      if(!bearer){
+        int seq=rn.get(id)+1;
+        rn.set(id,seq);
+        sem.request(id,seq);
+        estado=1;
+        sem.waitToken();
+      }
+    }
   }
 
   public static void main(String[] args) throws UnknownHostException,NotBoundException,MalformedURLException,RemoteException{
@@ -137,6 +130,8 @@ public class process{
     String strbearer=args[3];
     boolean bearer=false;
     int portm=8001;
+    int seq=0;
+    Token token;
 
     InetAddress servC=InetAddress.getByName("127.0.0.1");
     int PORT=8888;
@@ -150,17 +145,16 @@ public class process{
       System.out.println("'Bearer' invalido.");
       System.exit(0);
     }
-    System.out.println("Hola");
+    if (bearer) {
+      token=new Token(n);
+    }
     Semaforo sem = (Semaforo) Naming.lookup("rmi://localhost:1099/Semaforo");
-    sem.kill();
-    System.out.println("Adios");
-    System.exit(0);
+    Estado estado=new Estado(n,bearer,id,sem);
     System.out.println("ID: "+id+"|| Procesos: "+n+"|| Delay: "+initialDelay+"|| Bearer: "+bearer);
-    Runnable r= new listenerP(portm,address);
+    Runnable r= new listenerP(portm,address,estado);
     Thread nip= new Thread(r);
     nip.start();
-    Runnable u= new listenerUnicast(servC,PORT,id);
-    Thread nup= new Thread(u);
-    nup.start();
+    //sem.request(id,++seq);
+
   }
 }

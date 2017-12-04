@@ -39,9 +39,7 @@ public class process{
         byte[] buf=new byte[256];
         //Se ingresa al grupo multicast.
         clientSocket.joinGroup(address);
-
         while (true) {
-					System.out.println("Escuchando multicast");
           //Se limpia 'buf' en cada iteración y luego se crea el objeto que recibirá
           //  el datagrama.
           buf=new byte[256];
@@ -75,7 +73,6 @@ public class process{
     }
   }
   public static class Estado{
-    int estado=0; //TODO 0 indicara verde, 1 indicara amarillo y 2 rojo
     int id;
     boolean bearer;
     Semaforo sem;
@@ -106,11 +103,9 @@ public class process{
         int seq=rn.get(id)+1;
         rn.set(id,seq);
         sem.request(id,this.getRN(id));
-        estado=1;
 				try {
 					log("Semaforo: Amarillo",id);
 					token=sem.waitToken(id);
-					System.out.print("LN - ");
 					bearer=true;
 				}catch (IOException e) {
 					e.printStackTrace();
@@ -120,11 +115,10 @@ public class process{
 			token.actualizarLN(id,this.getRN(id));
 			token.enqueueUnattended(rn);
 			log("Semaforo: Verde",id);
-			token.printearLN();
+			sem.avisarTermino(id);
 			while(true){
-				System.out.println(token.tokenq);
-				sem.avisarTermino(id);
 				if (!sem.getTermino()) {
+					token.printearLN();
 					int resultado=sem.takeToken(token);
 					if(resultado==0){
 						break;
@@ -142,8 +136,6 @@ public class process{
 			}
 			token=null;
 			bearer=false;
-			//TODO restar a intentos
-			//TODO implementar en semaforo aviso de proceso que termina todos sus intentos
     }
   }
 	public static void log(String msg,int id){
@@ -151,13 +143,7 @@ public class process{
 		FileWriter fw = null;
 		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 		Date date = new Date();
-		System.out.println(dateFormat.format(date));
-		String data;
-		if(id==-69){
-			data="["+dateFormat.format(date)+" - Token] "+msg+"\n";
-		}else {
-			data="["+dateFormat.format(date)+" - P"+Integer.toString(id)+"] "+msg+"\n";
-		}
+		String data="["+dateFormat.format(date)+" - P"+Integer.toString(id)+"] "+msg+"\n";
 		try {
 			File file = new File("log.txt");
 			// if file doesnt exists, then create it
@@ -227,7 +213,6 @@ public class process{
 			e.printStackTrace();
 		}
 		estado.entrarZC();
-
 		while (true) {
 			if(sem.getTermino()){
 				sem.kill();

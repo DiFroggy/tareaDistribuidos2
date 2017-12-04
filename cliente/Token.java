@@ -29,9 +29,7 @@ public class Token implements Serializable{
 		FileWriter fw = null;
 		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 		Date date = new Date();
-		System.out.println(dateFormat.format(date));
-		String data;
-		data="["+dateFormat.format(date)+" - Token] "+msg+"\n";
+    String data="["+dateFormat.format(date)+" - Token] "+msg+"\n";
 		try {
 			File file = new File("log.txt");
 			// if file doesnt exists, then create it
@@ -74,7 +72,16 @@ public class Token implements Serializable{
       msg=msg+",";
     }
     msg=msg+"]";
-    log(msg);
+
+    List<Integer> listaT=new ArrayList<>();
+    while(tokenq.size()!=0){
+      listaT.add(tokenq.element());
+      tokenq.remove();
+    }
+    for (int i =0;i<listaT.size() ;i++ ) {
+      tokenq.add(listaT.get(i));
+    }
+    log(msg+" Queue - "+listaT);
+    //TODO mandar token tras hace pop
   }
-  //TODO mandar token tras hace pop
-}
+  }

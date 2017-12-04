@@ -20,7 +20,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
   static int portm=8001;
-  static List<Integer> puertos=new ArrayList<>();
   static List<Integer> estado=new ArrayList<>(); // 0 No inicializado, 1 Inicializado , 2 Terminado
   static InetAddress address;
   static boolean inicio=false;
@@ -38,7 +37,6 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
   }
   public void request(int id, int seq){
     String men="id: "+Integer.toString(id)+", seq: "+Integer.toString(seq);
-    System.out.println(men);
     try (DatagramSocket sSocket = new MulticastSocket(portm)) {
       DatagramPacket msgP = new DatagramPacket(men.getBytes(),
       men.getBytes().length, address, portm);
@@ -49,31 +47,7 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     }
   }
 	public Token waitToken(int id){
-    /*
-    try(DatagramSocket clientSocket = new DatagramSocket(0)){
-      byte[] buf = new byte[256];
-      registrarPuerto(id,clientSocket.getLocalPort());
-      DatagramPacket msgPacket = new DatagramPacket(buf, buf.length);
-      clientSocket.receive(msgPacket);
-      System.out.println("Recibi algo!");
-      try {
-        ByteArrayInputStream byteArray = new ByteArrayInputStream( buf );
-        ObjectInputStream objInput = new ObjectInputStream( byteArray );
-        token = (Token) objInput.readObject();
-        objInput.close();
 
-      }catch (ClassNotFoundException e) {
-        e.printStackTrace();
-      }
-
-    }catch (IOException e) {
-      e.printStackTrace();
-    }*/
-    /*
-    if(id==token.peek()){
-      hasToken=false;
-      return(token);
-    }*/
     while(true){
       if(hasToken&&token.size()!=0){
         if(token.peek()==id){
@@ -92,31 +66,6 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
   }
 
   public int takeToken (Token t){
-    /*
-    try (DatagramSocket clientSocket = new DatagramSocket(0)){
-      if(token.size()==0){
-        System.out.println("No hay nada en el queue!");
-        clientSocket.close();
-        return(-1);
-      }
-      int id=token.pop();
-      System.out.println(id);
-      ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-      ObjectOutputStream objOutput = new ObjectOutputStream(byteArray);
-      objOutput.writeObject(token);
-      objOutput.close();
-      byte[] buf = byteArray.toByteArray();
-      try {
-        Thread.sleep(10000);
-      }catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-      DatagramPacket msgPacket = new DatagramPacket(buf, buf.length,address,puertos.get(id));
-      clientSocket.send(msgPacket);
-
-    }catch (IOException ee) {
-      ee.printStackTrace();
-    }*/
     token=t;
     if(token.size()==0){
       return(-1);
@@ -124,10 +73,6 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     hasToken=true;
     return(0);
 
-  }
-  public void registrarPuerto(int id,int puerto){
-    puertos.set(id,puerto);
-    System.out.println(puerto);
   }
   public int avisarInicio(int id){
     estado.set(id,1);
@@ -160,8 +105,8 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     address=InetAddress.getByName("224.0.1.1");
     int port=1098;
     n=Integer.parseInt(args[0]);
+    killingSpree=0;
     for (int i=0;i<n;i++ ) {
-        puertos.add(0);
         estado.add(0);
     }
     String url = "rmi://localhost:"+Integer.toString(port)+"/Semaforo";
@@ -185,7 +130,6 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
           System.exit(0);
         }else{
           try {
-            System.out.println(killingSpree);
             Thread.sleep(1000);
           }catch (InterruptedException e) {
             e.printStackTrace();

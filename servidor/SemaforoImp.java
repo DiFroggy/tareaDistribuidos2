@@ -1,3 +1,11 @@
+/*SemaforoImp
+*
+*v1.0: Primera implementación funcional de SemaforoImp
+*
+*04/12/2017
+*
+*Donut steel pls
+*/
 package servidor;
 
 import cliente.Semaforo;
@@ -19,8 +27,8 @@ import java.net.MulticastSocket;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
-  static int portm=8001;
   static List<Integer> estado=new ArrayList<>(); // 0 No inicializado, 1 Inicializado , 2 Terminado
+  static int portm=8001;
   static InetAddress address;
   static boolean inicio=false;
   static boolean termino=false;
@@ -28,13 +36,20 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
   static boolean hasToken=false;
   static Token token;
   static int killingSpree;
-  //TODO hacer comprobacion de que todos los procesos fueron inicializados
+
+  //Constructor
   public SemaforoImp() throws RemoteException{
     super();
   }
+
+  /*kill: Aumenta el valor de killingSpree, variable utilizada para definir
+  *       cuantos procesos han llamado al término del programa.*/
   public void kill(){
     killingSpree++;
   }
+
+  /*request: Método que recibe un request de un proceso y lo difunde utilizando
+  *          mensajes multicast a los demás procesos.*/
   public void request(int id, int seq){
     String men="id: "+Integer.toString(id)+", seq: "+Integer.toString(seq);
     try (DatagramSocket sSocket = new MulticastSocket(portm)) {
@@ -46,10 +61,14 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
       ee.printStackTrace();
     }
   }
-	public Token waitToken(int id){
 
+  /*waitToken: Método que deja en espera al proceso hasta que su id sea el
+  *           primero en la cola del token. Posteriormente retorna al objeto
+  *           token.  */
+	public Token waitToken(int id){
     while(true){
       if(hasToken&&token.size()!=0){
+        System.out.println(token.peek());
         if(token.peek()==id){
           break;
         }
@@ -65,6 +84,9 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     return(token);
   }
 
+  /*takeToken: Método que entrega el token desde el proceso mientras tenga
+  *           requests encolados para evitar que quede atrapado en el servidor.
+  */
   public int takeToken (Token t){
     token=t;
     if(token.size()==0){
@@ -72,8 +94,12 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     }
     hasToken=true;
     return(0);
-
   }
+
+  /*avisarInicio: Método que indica la inicialización del proceso 'id'. Cada
+  *               vez que es llamado, ve si todos los procesos en la lista
+  *               'estado' han sido inicializados para cambiar la variable
+  *               'inicio'.*/
   public int avisarInicio(int id){
     estado.set(id,1);
     for (int i =0;i<n ;i++ ) {
@@ -84,6 +110,11 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     inicio=true;
     return(1);
   }
+
+  /*avisarTermino: Método que indica el termino del proceso 'id'. Cada vez
+  *               que es llamado, chequea si todos los procesos en la lista
+  *               estado han finalizado su ejecución para cambiar la variable
+  *              'termino'.*/
   public int avisarTermino(int id){
     estado.set(id,2);
     for (int i=0 ;i<n ;i++ ) {
@@ -94,13 +125,26 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     termino=true;
     return(1);
   }
+
+  /*getInicio: Retorna 'estado', que indica que todos los procesos se han
+  *            inicializado.
+  */
   public boolean getInicio(){
     return inicio;
   }
+
+  /*getTermino: Retorna 'termino', que indica que todos los procesos se han
+  *            terminado de ejecutar.
+  */
   public boolean getTermino(){
     return termino;
   }
 
+  /*main: La creme de la creme, primero registra los métodos rmi y
+  *       posteriormente espera a que todos los procesos hayan finalizado
+  *       para así cerrar los threads multicast de los procesos y terminar
+  *       el algoritmo.
+  */
   public static void main(String[] args) throws UnknownHostException {
     address=InetAddress.getByName("224.0.1.1");
     int port=1098;

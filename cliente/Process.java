@@ -1,3 +1,11 @@
+/*Process
+*
+*v1.0: Primera implementación funcional de Process
+*
+*04/12/2017
+*
+*Donut steel pls
+*/
 package cliente;
 
 import java.io.*;
@@ -16,11 +24,11 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class process{
-
-
+public class Process{
+ /**listenerP: Clase que implementa un puerto multicast para recibir request.
+  *						 Requests son emitidos por procesos por RMI y luego enviados por
+	*            Multicast a cada proceso.*/
 	public static class listenerP implements Runnable{
-    //Definicion de variables para almacenar ip y port multicast.
     public int portm;
     public InetAddress address;
     public Estado estado;
@@ -29,30 +37,19 @@ public class process{
       this.address=dir;
       this.estado=state;
     }
-    //Codigo del thread.
     public void run(){
-      //Se abre el socket multicast para escuchar al puerto indicado.
       try (MulticastSocket clientSocket = new MulticastSocket(portm)){
-        //buf: Arreglo de bytes utilizado para recibir los paquetes.
-        //msg: String donde se maneja el contenido de los paquetes.
         String msg;
         byte[] buf=new byte[256];
-        //Se ingresa al grupo multicast.
         clientSocket.joinGroup(address);
         while (true) {
-          //Se limpia 'buf' en cada iteración y luego se crea el objeto que recibirá
-          //  el datagrama.
           buf=new byte[256];
           DatagramPacket msgPacket = new DatagramPacket(buf, buf.length);
-          //Se recibe el paquete.
           clientSocket.receive(msgPacket);
-          //Guardar en msg el contenido del datagrama.
           msg = new String(buf, 0, msgPacket.getLength());
-					//En caso de que se haya llamado a la interrupción del thread, salir del loop.
 					if(msg.equals("kill")){
 						break;
 					}
-          //Se utilizan expresiones regulares para extraer la informacion del distrito.
           String patron="id: ([0-9]+), seq: ([0-9]+)";
           Pattern lector=Pattern.compile(patron);
           Matcher matcher= lector.matcher(msg);
@@ -65,19 +62,21 @@ public class process{
           estado.printRN();
 
         }
-        //Si se sale del loop, dejar el grupo multicast.
         clientSocket.leaveGroup(address);
       } catch (IOException ex) {
         ex.printStackTrace();
       }
     }
   }
+	/*Estado: Clase que indica el estado interno del proceso y ofrece métodos durante
+	*         la ejecución de procesos.*/
   public static class Estado{
     int id;
     boolean bearer;
     Semaforo sem;
     List<Integer> rn=new ArrayList<>();
 		Token token;
+		//Constructor de la clase
     public Estado(int n,boolean b,int idd,Semaforo semaforo){
       for (int i=0;i<n;i++) {
         rn.add(0);
@@ -89,15 +88,22 @@ public class process{
 				this.token=new Token(n);
       }
     }
+		//getRN: Obtiene el número de secuencia registrado en el proceso del proceso id.
     public int getRN(int id){
       return(rn.get(id));
     }
+		//setRN: Define el número de secuenci registrado en el proceso del proceso id.
     public void setRN(int id,int seq){
       rn.set(id,seq);
     }
+		//printRN: Método intermedio que llama a log para escribir en el archivo la lista RN.
     public void printRN(){
       log("RN - "+rn,id);
     }
+		/*entrarZC: Método que define la lógica de entrada a la zona crítica,
+		*					  ejecutando los métodos anteriores para mantener la consistencia
+		*						del log y gestionando el movimiento del token.
+		*/
     public void entrarZC() throws RemoteException{
 			if(!bearer){
         int seq=rn.get(id)+1;
@@ -119,6 +125,7 @@ public class process{
 			while(true){
 				if (!sem.getTermino()) {
 					token.printearLN();
+					bearer=false;
 					int resultado=sem.takeToken(token);
 					if(resultado==0){
 						break;
@@ -138,6 +145,8 @@ public class process{
 			bearer=false;
     }
   }
+	/*log: Método que escribe en un archivo log.txt el mensaje msg, indicando la
+				 hora del log e id del proceso.*/
 	public static void log(String msg,int id){
 		BufferedWriter bw = null;
 		FileWriter fw = null;
@@ -146,9 +155,7 @@ public class process{
 		String data="["+dateFormat.format(date)+" - P"+Integer.toString(id)+"] "+msg+"\n";
 		try {
 			File file = new File("log.txt");
-			// if file doesnt exists, then create it
 			file.createNewFile();
-			// true = append file
 			fw = new FileWriter(file.getAbsoluteFile(), true);
 			bw = new BufferedWriter(fw);
 			bw.write(data);
@@ -166,8 +173,13 @@ public class process{
 		}
 	}
 
+	/*main: Primero se definen las variables, obtiene los métodos rmi a través del
+	*				objeto 'sem'. Luego se espera a la inicialización de todos los procesos
+	*				utilizando avisarInicio() y getInicio(). Posteriormente se llama a
+	*       ejecutarZC() para la ejecución del algoritmo y finalmente se asegura que
+	*				todos los procesos hayan terminado usando avisarTermino() y getTermino().
+	*/
   public static void main(String[] args) throws UnknownHostException,NotBoundException,MalformedURLException,RemoteException{
-    //Inicializamos todas las variables
     int id=Integer.parseInt(args[0]);
     int n=Integer.parseInt(args[1]);
     int initialDelay=Integer.parseInt(args[2]);

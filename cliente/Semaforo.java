@@ -1,8 +1,18 @@
+/*Semaforo
+*
+*v1.0: Primera implementación funcional de Semaforo
+*
+*04/12/2017
+*
+*Donut steel pls
+*/
+
 package cliente;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.io.IOException;
+
 public interface Semaforo extends Remote{
 	void request(int id, int seq) throws RemoteException;
 	Token waitToken(int id) throws RemoteException,IOException;

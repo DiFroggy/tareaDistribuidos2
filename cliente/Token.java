@@ -2,6 +2,9 @@ package cliente;
 
 import java.io.Serializable;
 import java.util.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.io.*;
 
 public class Token implements Serializable{
   Vector<Integer> ln = new Vector<Integer>();
@@ -21,10 +24,57 @@ public class Token implements Serializable{
       }
     }
   }
+  public static void log(String msg){
+		BufferedWriter bw = null;
+		FileWriter fw = null;
+		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+		Date date = new Date();
+		System.out.println(dateFormat.format(date));
+		String data;
+		data="["+dateFormat.format(date)+" - Token] "+msg+"\n";
+		try {
+			File file = new File("log.txt");
+			// if file doesnt exists, then create it
+			file.createNewFile();
+			// true = append file
+			fw = new FileWriter(file.getAbsoluteFile(), true);
+			bw = new BufferedWriter(fw);
+			bw.write(data);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (bw != null)
+					bw.close();
+				if (fw != null)
+					fw.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+  }
   public int pop(){
     int id=tokenq.element();
     tokenq.remove();
     return(id);
+  }
+  public int size(){
+    return(this.tokenq.size());
+  }
+  public int peek(){
+    return(tokenq.peek());
+  }
+  public void printearLN(){
+    String msg="LN - [";
+    for (int i=0;i<ln.size() ;i++ ) {
+      msg=msg+Integer.toString(ln.get(i));
+      if (i==ln.size()-1) {
+        break;
+      }
+      msg=msg+",";
+    }
+    msg=msg+"]";
+    log(msg);
   }
   //TODO mandar token tras hace pop
 }

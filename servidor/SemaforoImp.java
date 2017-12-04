@@ -28,24 +28,13 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
   static int n;
   static boolean hasToken=false;
   static Token token;
+  static int killingSpree;
   //TODO hacer comprobacion de que todos los procesos fueron inicializados
   public SemaforoImp() throws RemoteException{
     super();
-
   }
   public void kill(){
-    System.out.println("Dude with a gun: Die potato!");
-    System.out.println("Potato: Gracias Boina.");
-    String men="kill";
-    System.out.println(men);
-    try (DatagramSocket sSocket = new MulticastSocket(portm)) {
-      DatagramPacket msgP = new DatagramPacket(men.getBytes(),
-      men.getBytes().length, address, portm);
-      sSocket.send(msgP);
-      sSocket.close();
-    } catch (IOException ee) {
-      ee.printStackTrace();
-    }
+    killingSpree++;
   }
   public void request(int id, int seq){
     String men="id: "+Integer.toString(id)+", seq: "+Integer.toString(seq);
@@ -85,10 +74,8 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
       hasToken=false;
       return(token);
     }*/
-    System.out.println("ID del que espera: "+Integer.toString(id));
     while(true){
       if(hasToken&&token.size()!=0){
-        System.out.println("ID del siguiente en la cola"+Integer.toString(token.peek()));
         if(token.peek()==id){
           break;
         }
@@ -99,8 +86,7 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
         e.printStackTrace();
       }
     }
-    System.out.print("Pop: ");
-    System.out.println(token.pop());
+    token.pop();
     hasToken=false;
     return(token);
   }
@@ -135,7 +121,6 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
     if(token.size()==0){
       return(-1);
     }
-    System.out.println(token.peek());
     hasToken=true;
     return(0);
 
@@ -173,19 +158,40 @@ public class SemaforoImp extends UnicastRemoteObject implements Semaforo {
 
   public static void main(String[] args) throws UnknownHostException {
     address=InetAddress.getByName("224.0.1.1");
-    int port=1099;
+    int port=1098;
     n=Integer.parseInt(args[0]);
     for (int i=0;i<n;i++ ) {
         puertos.add(0);
         estado.add(0);
     }
-    String url = "rmi://localhost:1099/Semaforo";
+    String url = "rmi://localhost:"+Integer.toString(port)+"/Semaforo";
     try {
       LocateRegistry.createRegistry(port);
       SemaforoImp obj=new SemaforoImp();
       Naming.rebind(url,obj);
-      //Semaforo stub = (Semaforo) UnicastRemoteObject.exportObject(obj,0);
-
+      while(true){
+        if (killingSpree==n) {
+          String men="kill";
+          System.out.println(men);
+          try (DatagramSocket sSocket = new MulticastSocket(portm)) {
+            DatagramPacket msgP = new DatagramPacket(men.getBytes(),
+            men.getBytes().length, address, portm);
+            sSocket.send(msgP);
+            sSocket.close();
+          } catch (IOException ee) {
+            ee.printStackTrace();
+          }
+          System.out.println("Cerrando servidor.");
+          System.exit(0);
+        }else{
+          try {
+            System.out.println(killingSpree);
+            Thread.sleep(1000);
+          }catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+      }
     } catch (RemoteException | MalformedURLException e){
       e.printStackTrace();
     }

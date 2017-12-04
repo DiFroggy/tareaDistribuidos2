@@ -16,15 +16,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-/*TODO Codigo que aun no se DONDE poner.
-
-//Objeto a JSON
-ObjectMapper mapper = new ObjectMapper();
-String jsonInString=mapper.writeValueAsString(toki);
-//JSON a objeto
-token toki=mapper.readValue(jsonInString,token.class);
-*/
-
 public class process{
 
 
@@ -144,7 +135,6 @@ public class process{
 						e.printStackTrace();
 					}
 				}else{
-					sem.kill();
 					break;
 				}
 				token.actualizarLN(id,this.getRN(id));
@@ -198,6 +188,7 @@ public class process{
     String strbearer=args[3];
     boolean bearer=false;
     int portm=8001;
+		int port=1098;
     int seq=0;
     Token token;
 		InetAddress address=InetAddress.getByName("224.0.1.1");
@@ -211,7 +202,7 @@ public class process{
       System.exit(0);
     }
 
-    Semaforo sem = (Semaforo) Naming.lookup("rmi://localhost:1099/Semaforo");
+    Semaforo sem = (Semaforo) Naming.lookup("rmi://localhost:"+Integer.toString(port)+"/Semaforo");
     Estado estado=new Estado(n,bearer,id,sem);
     System.out.println("ID: "+id+"|| Procesos: "+n+"|| Delay: "+initialDelay+"|| Bearer: "+bearer);
     Runnable r= new listenerP(portm,address,estado);
@@ -239,6 +230,7 @@ public class process{
 
 		while (true) {
 			if(sem.getTermino()){
+				sem.kill();
 				System.out.println("Todos los procesos han acabado de procesar su zona critica.");
 				break;
 			}
